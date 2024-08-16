@@ -3,7 +3,15 @@ import os
 import re
 import time
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, File, UploadFile, Header
+from fastapi import (
+    FastAPI,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+    File,
+    UploadFile,
+    Header,
+)
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +32,7 @@ class ResearchRequest(BaseModel):
     report_type: str
     agent: str
 
+
 class ConfigRequest(BaseModel):
     ANTHROPIC_API_KEY: str
     TAVILY_API_KEY: str
@@ -32,12 +41,13 @@ class ConfigRequest(BaseModel):
     OPENAI_API_KEY: str
     DOC_PATH: str
     RETRIEVER: str
-    GOOGLE_API_KEY: str = ''
-    GOOGLE_CX_KEY: str = ''
-    BING_API_KEY: str = ''
-    SERPAPI_API_KEY: str = ''
-    SERPER_API_KEY: str = ''
-    SEARX_URL: str = ''
+    GOOGLE_API_KEY: str = ""
+    GOOGLE_CX_KEY: str = ""
+    BING_API_KEY: str = ""
+    SERPAPI_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
+    SEARX_URL: str = ""
+
 
 app = FastAPI()
 
@@ -47,6 +57,7 @@ app.mount("/static", StaticFiles(directory="./frontend/static"), name="static")
 templates = Jinja2Templates(directory="./frontend")
 
 manager = WebSocketManager()
+
 
 # Dynamic directory for outputs once first research is run
 @app.on_event("startup")
@@ -66,6 +77,7 @@ async def read_root(request: Request):
 # Add the sanitize_filename function here
 def sanitize_filename(filename):
     return re.sub(r"[^\w\s-]", "", filename).strip()
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -87,7 +99,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 report_source = json_data.get("report_source")
                 if task and report_type:
                     report = await manager.start_streaming(
-                        task, report_type, report_source, source_urls, tone, websocket, headers
+                        task,
+                        report_type,
+                        report_source,
+                        source_urls,
+                        tone,
+                        websocket,
+                        headers,
                     )
                     # Ensure report is a string
                     if not isinstance(report, str):
@@ -114,14 +132,20 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
 
+
 @app.post("/api/multi_agents")
 async def run_multi_agents():
     websocket = manager.active_connections[0] if manager.active_connections else None
     if websocket:
-        report = await run_research_task("Is AI in a hype cycle?", websocket, stream_output)
+        report = await run_research_task(
+            "Is AI in a hype cycle?", websocket, stream_output
+        )
         return {"report": report}
     else:
-        return JSONResponse(status_code=400, content={"message": "No active WebSocket connection"})
+        return JSONResponse(
+            status_code=400, content={"message": "No active WebSocket connection"}
+        )
+
 
 @app.get("/getConfig")
 async def get_config(
@@ -133,23 +157,40 @@ async def get_config(
     bing_api_key: str = Header(None),
     serpapi_api_key: str = Header(None),
     serper_api_key: str = Header(None),
-    searx_url: str = Header(None)
+    searx_url: str = Header(None),
 ):
     config = {
-        "LANGCHAIN_API_KEY": langchain_api_key if langchain_api_key else os.getenv("LANGCHAIN_API_KEY", ""),
-        "OPENAI_API_KEY": openai_api_key if openai_api_key else os.getenv("OPENAI_API_KEY", ""),
-        "TAVILY_API_KEY": tavily_api_key if tavily_api_key else os.getenv("TAVILY_API_KEY", ""),
-        "GOOGLE_API_KEY": google_api_key if google_api_key else os.getenv("GOOGLE_API_KEY", ""),
-        "GOOGLE_CX_KEY": google_cx_key if google_cx_key else os.getenv("GOOGLE_CX_KEY", ""),
+        "LANGCHAIN_API_KEY": (
+            langchain_api_key
+            if langchain_api_key
+            else os.getenv("LANGCHAIN_API_KEY", "")
+        ),
+        "OPENAI_API_KEY": (
+            openai_api_key if openai_api_key else os.getenv("OPENAI_API_KEY", "")
+        ),
+        "TAVILY_API_KEY": (
+            tavily_api_key if tavily_api_key else os.getenv("TAVILY_API_KEY", "")
+        ),
+        "GOOGLE_API_KEY": (
+            google_api_key if google_api_key else os.getenv("GOOGLE_API_KEY", "")
+        ),
+        "GOOGLE_CX_KEY": (
+            google_cx_key if google_cx_key else os.getenv("GOOGLE_CX_KEY", "")
+        ),
         "BING_API_KEY": bing_api_key if bing_api_key else os.getenv("BING_API_KEY", ""),
-        "SERPAPI_API_KEY": serpapi_api_key if serpapi_api_key else os.getenv("SERPAPI_API_KEY", ""),
-        "SERPER_API_KEY": serper_api_key if serper_api_key else os.getenv("SERPER_API_KEY", ""),
+        "SERPAPI_API_KEY": (
+            serpapi_api_key if serpapi_api_key else os.getenv("SERPAPI_API_KEY", "")
+        ),
+        "SERPER_API_KEY": (
+            serper_api_key if serper_api_key else os.getenv("SERPER_API_KEY", "")
+        ),
         "SEARX_URL": searx_url if searx_url else os.getenv("SEARX_URL", ""),
         "LANGCHAIN_TRACING_V2": os.getenv("LANGCHAIN_TRACING_V2", "true"),
         "DOC_PATH": os.getenv("DOC_PATH", ""),
-        "RETRIEVER": os.getenv("RETRIEVER", "")
+        "RETRIEVER": os.getenv("RETRIEVER", ""),
     }
     return config
+
 
 @app.post("/setConfig")
 async def set_config(config: ConfigRequest):
@@ -168,6 +209,7 @@ async def set_config(config: ConfigRequest):
     os.environ["SEARX_URL"] = config.SEARX_URL
     return {"message": "Config updated successfully"}
 
+
 # Enable CORS for your frontend domain (adjust accordingly)
 app.add_middleware(
     CORSMiddleware,
@@ -181,7 +223,7 @@ app.add_middleware(
 # Define DOC_PATH
 DOC_PATH = os.getenv("DOC_PATH", "./my-docs")
 if not os.path.exists(DOC_PATH):
-    os.makedirs(DOC_PATH)
+    os.makedirs(DOC_PATH, exist_ok=True)
 
 
 @app.post("/upload/")
@@ -203,6 +245,7 @@ async def list_files():
     files = os.listdir(DOC_PATH)
     print(f"Files in {DOC_PATH}: {files}")
     return {"files": files}
+
 
 @app.delete("/files/{filename}")
 async def delete_file(filename: str):
