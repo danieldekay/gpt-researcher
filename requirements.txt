@@ -29,5 +29,5 @@ json_repair
 json5
 
 # uncomment for testing
-pytest
-pytest-asyncio
+# pytest
+# pytest-asyncio
